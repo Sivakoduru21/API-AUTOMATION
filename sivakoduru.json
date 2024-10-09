@@ -1,0 +1,199 @@
+{
+	"info": {
+		"_postman_id": "89ec76a9-98a4-44b8-8c77-fc10cec3a2c7",
+		"name": "sivakoduru",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38862057"
+	},
+	"item": [
+		{
+			"name": "http://jsonplaceholder.typicode.com/users",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response\r",
+							"const users = pm.response.json();\r",
+							"\r",
+							"// Define criteria for 'FanCode' city\r",
+							"const isFanCodeCity = (user) => {\r",
+							"    const lat = parseFloat(user.address.geo.lat);\r",
+							"    const lng = parseFloat(user.address.geo.lng);\r",
+							"    return lat >= -40 && lat <= 5 && lng >= 5 && lng <= 100;\r",
+							"};\r",
+							"\r",
+							"// Filter users who belong to 'FanCode' city\r",
+							"const fanCodeUsers = users.filter(user => isFanCodeCity(user));\r",
+							"\r",
+							"// Extract and store the user IDs of FanCode users in an environment variable\r",
+							"const fanCodeUserIds = fanCodeUsers.map(user => user.id);\r",
+							"pm.environment.set('fanCodeUserIds', JSON.stringify(fanCodeUserIds));\r",
+							"\r",
+							"// Log to console\r",
+							"console.log(`FanCode User IDs: ${fanCodeUserIds}`);\r",
+							"\r",
+							"// Assert at least one user is found\r",
+							"pm.test(\"At least one user belongs to FanCode city\", function() {\r",
+							"    pm.expect(fanCodeUserIds.length).to.be.above(0);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://jsonplaceholder.typicode.com/users",
+					"protocol": "http",
+					"host": [
+						"jsonplaceholder",
+						"typicode",
+						"com"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://jsonplaceholder.typicode.com/todos",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Retrieve the stored 'fanCodeUserIds' from the environment variables\r",
+							"const fanCodeUserIdsString = pm.environment.get('fanCodeUserIds');\r",
+							"\r",
+							"if (fanCodeUserIdsString) {\r",
+							"    try {\r",
+							"        // Parse the JSON string to convert it back to an array\r",
+							"        const fanCodeUserIds = JSON.parse(fanCodeUserIdsString);\r",
+							"\r",
+							"        // Set the parsed user IDs array in an environment variable for use in the request\r",
+							"        pm.environment.set('currentFanCodeUserIds', fanCodeUserIds);\r",
+							"\r",
+							"        // Log the IDs to the console for debugging\r",
+							"        console.log('FanCode User IDs:', fanCodeUserIds);\r",
+							"    } catch (e) {\r",
+							"        console.error('Error parsing fanCodeUserIds:', e);\r",
+							"        pm.environment.unset('currentFanCodeUserIds'); // Remove the variable if parsing fails\r",
+							"    }\r",
+							"} else {\r",
+							"    // Log an error message if 'fanCodeUserIds' is not found\r",
+							"    console.error('FanCode User IDs not found in environment variables. Please check if Request 1: Get Users ran successfully.');\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response body to get the list of todos\r",
+							"const todos = pm.response.json();\r",
+							"\r",
+							"// Retrieve the current FanCode user IDs from the environment variable\r",
+							"const fanCodeUserIds = pm.environment.get('currentFanCodeUserIds');\r",
+							"\r",
+							"// Ensure the fanCodeUserIds array is available and valid\r",
+							"pm.test(\"FanCode user IDs should be available and valid\", function () {\r",
+							"    pm.expect(fanCodeUserIds).to.be.an('array');\r",
+							"});\r",
+							"\r",
+							"// Proceed only if fanCodeUserIds is a valid array\r",
+							"if (Array.isArray(fanCodeUserIds)) {\r",
+							"    const userCompletionData = {};\r",
+							"\r",
+							"    // Loop through each FanCode user ID to calculate their completion percentage\r",
+							"    fanCodeUserIds.forEach(userId => {\r",
+							"        // Get todos for the current user\r",
+							"        const userTodos = todos.filter(todo => todo.userId === userId);\r",
+							"\r",
+							"        // Total number of todos for the user\r",
+							"        const totalTasks = userTodos.length;\r",
+							"\r",
+							"        // Number of completed todos\r",
+							"        const completedTasks = userTodos.filter(todo => todo.completed).length;\r",
+							"\r",
+							"        // Calculate the percentage of completed tasks\r",
+							"        const completionPercentage = (completedTasks / totalTasks) * 100;\r",
+							"\r",
+							"        // Store the user's todo data in the userCompletionData object\r",
+							"        userCompletionData[userId] = {\r",
+							"            totalTasks,\r",
+							"            completedTasks,\r",
+							"            completionPercentage\r",
+							"        };\r",
+							"\r",
+							"        // Log the results for each user\r",
+							"        console.log(`User ID: ${userId} | Total Tasks: ${totalTasks} | Completed Tasks: ${completedTasks} | Completion Percentage: ${completionPercentage.toFixed(2)}%`);\r",
+							"    });\r",
+							"\r",
+							"    // Check if all FanCode users have more than 50% of their tasks completed\r",
+							"    const allUsersAboveThreshold = Object.values(userCompletionData).every(data => data.completionPercentage > 50);\r",
+							"\r",
+							"    // Test to ensure all FanCode users have more than 50% of their todos completed\r",
+							"    pm.test(\"All FanCode users have more than 50% of their tasks completed\", function () {\r",
+							"        pm.expect(allUsersAboveThreshold).to.be.true;\r",
+							"    });\r",
+							"\r",
+							"    // Log the final validation result\r",
+							"    console.log(\"All FanCode users have more than 50% of their tasks completed:\", allUsersAboveThreshold);\r",
+							"\r",
+							"    // Add the test results to the Postman test summary\r",
+							"    Object.keys(userCompletionData).forEach(userId => {\r",
+							"        const { totalTasks, completedTasks, completionPercentage } = userCompletionData[userId];\r",
+							"        pm.test(`User ID: ${userId} | Completion Percentage: ${completionPercentage.toFixed(2)}% (Completed Tasks: ${completedTasks} / Total Tasks: ${totalTasks})`, function () {\r",
+							"            pm.expect(completionPercentage).to.be.above(50);\r",
+							"        });\r",
+							"    });\r",
+							"} else {\r",
+							"    console.error('fanCodeUserIds is not an array. Please check the pre-request script.');\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://jsonplaceholder.typicode.com/todos",
+					"protocol": "http",
+					"host": [
+						"jsonplaceholder",
+						"typicode",
+						"com"
+					],
+					"path": [
+						"todos"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
